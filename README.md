@@ -1,4 +1,4 @@
-<img src="extras/banner1-png">
+<img src="extras/banner1-jpg">
 
 # Curso de Python avanzado | código 74433 
 
@@ -7,12 +7,4 @@
 > 9 clases desde 13/12/2024 hasta 10/01/2025
 > Código 74433
 
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/:python)
-
-python -m pybadges \
-    --left-text="python" \
-    --right-text="3.2, 3.3, 3.4, 3.5, 3.6" \
-    --whole-link="https://www.python.org/" \
-    --browser \
-    --logo='https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/python.svg'
-
+<img src="http://b90e65a6219dd9bdb77c2b1eee9/68747470733a2f2f696d672e736869656c64732e696f2f707970692f707976657273696f6e732f70796261646765732e737667">
