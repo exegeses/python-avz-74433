@@ -1,0 +1,56 @@
+{
+    "conexion":{"host": "localhost" ,"user": "root" , "passwd": "2025"},
+    "base_de_datos": "IT_bbdd_2025_2",
+    "tablas": {
+        "productos": {
+            "codigo": "VARCHAR(255) PRIMARY KEY NOT NULL,",
+            "descripcion": "TEXT NOT NULL,",
+            "precio": "FLOAT,",            
+            "vencimiento": "DATE"
+        },
+        "stock": {
+            "id": "INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,",
+            "lote": "INTEGER NOT NULL,",
+            "codigo_producto": "VARCHAR(255) NOT NULL,",
+            "cantidad": "INTEGER NOT NULL,",
+            "FOREIGN KEY":"(codigo_producto) REFERENCES productos(codigo)"
+        },
+        "compras": {
+            "id": "INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,",
+            "cliente": "INTEGER NOT NULL,",
+            "codigo_producto": "VARCHAR(255)  NOT NULL,",
+            "precio_ventas": "FLOAT,",    
+            "telefono": "VARCHAR(255),",
+            "descuento": "INTEGER ,",
+            "FOREIGN KEY":"(codigo_producto) REFERENCES productos(codigo)"
+        }         
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
