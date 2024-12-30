@@ -31,8 +31,7 @@ print(F'''{Fore.WHITE+ Style.BRIGHT + Back.BLUE}
 ║              ║    ╚╗     ╔╝        ║       ║            ║       ║           ║
 ║              ╩     ╚═════╝         ╩       ╚═══════╝    ╩       ╩           ║
 ║                                                                             ║
-║                            _____________________                            ║
-║                                                                             ║
+║                    ╠═══════════════════════════════════╣                    ║
 ║                                                                             ║
 ║    ╔═══════╗            ╦                                   ╦   ╔═══╦═══╗   ║
 ║    ║                    ║                                   ║       ║       ║
@@ -635,7 +634,7 @@ def actualizar_datos():
 ╚═════════════════════════════════════════════════════════════════════════════╝{Style.RESET_ALL}""")
     cursor = conectar_base_de_datos()#           sqlite // mysql
 
-    query = f"UPDATE {nombre_tabla_productos} SET {nombre_columna_3} = 'T_lta' WHERE {nombre_columna_1} = 'Tomates' "
+    query = f"UPDATE {nombre_tabla_productos} SET {nombre_columna_3} = 'T_lta' WHERE {nombre_columna_1} = 'Tomates'; "
     print (query)
     cursor.execute(query)
     connection.commit()
@@ -661,7 +660,7 @@ def borrar_datos():
 ║                                                                             ║
 ╚═════════════════════════════════════════════════════════════════════════════╝{Style.RESET_ALL}""")
     cursor = conectar_base_de_datos()#           sqlite // mysql
-    query = f"DELETE FROM {nombre_tabla_productos}  WHERE {nombre_columna_1} = 'Sal'"# and {columna2} = '{dato2}'
+    query = f"DELETE FROM {nombre_tabla_productos}  WHERE {nombre_columna_1} = 'Sal' ;"# and {columna2} = '{dato2}'
     cursor.execute(query )
     print(cursor.rowcount, "record(s) affected")
     query = f"DELETE FROM {nombre_tabla_productos}  WHERE {nombre_columna_1} = "
@@ -675,11 +674,24 @@ SQLite         ?   "
 MySQL          %s  "
     """
 
-    proy = ("Te", ) # VA una coma para generar una lista
+    proy = ("Te", ) # VA una coma para generar una lista o tupla
     print         (query , proy)
     cursor.execute(query , proy)
-    connection.commit()
-    print(cursor.rowcount, "record(s) affected")
+    
+    cant_reg_borrados = cursor.rowcount
+    # Supongamos que `cant_reg_borrados` y `connection` ya están definidos.
+    salida = None  # Inicializar la variable para evitar errores
+
+    while salida not in ("N", "S"):
+        salida = input(f"Estás a punto de eliminar {cant_reg_borrados} registros. ¿Estás seguro? (S/N): ").strip().upper()
+
+    if salida == "N":
+        connection.rollback()
+        print("Operación cancelada. Los cambios no se han aplicado.")
+    elif salida == "S":
+        connection.commit()
+        print("Operación confirmada. Los cambios se han aplicado.")
+
     pausa()
     #--------------------------------------------------------------------
     proy = ("pizza", ) # VA una coma para generar una lista
@@ -1026,7 +1038,21 @@ def vista():
 ║                                  (borrar)                                   ║
 ║                                                                             ║
 ║                                                                             ║
-╚═════════════════════════════════════════════════════════════════════════════╝{Style.RESET_ALL}""")
+╚═════════════════════════════════════════════════════════════════════════════╝{Style.RESET_ALL}
+
+CREATE VIEW listado_precios
+  AS
+    SELECT  idProducto AS ID,
+            prdNombre AS Producto,
+            prdPrecio AS Contado,
+            format( prdPrecio * 1.05, 2 ) AS 'Precio de Lista',
+            mkNombre AS Marca,
+            catNombre AS Categoría
+        FROM productos AS p
+        JOIN marcas AS m
+          ON p.idMarca = m.idMarca
+        JOIN categorias c
+          ON c.idCategoria = p.idCategoria;""")
     cursor.execute(query)
     connection.commit()
     
@@ -1082,10 +1108,9 @@ def xlsx():
     filas = cursor.fetchall()
 
     #----------------------------------------
-
     # ~ agregar columna total (stock x precio)
-
     #----------------------------------------
+    
     for fila in filas:
         ws.append(fila)
         print (f"{fila=}")
@@ -1133,7 +1158,7 @@ def crear_procedimiento_obtener_stock():
                 SELECT codigo_producto, cantidad
                 FROM stock
                 WHERE cantidad <= 20;  -- Puedes ajustar este valor a lo que consideres "stock bajo"
-            END
+            END        
             """
             cursor.execute(procedimiento)
             print("Procedimiento almacenado 'ObtenerStockBajo' creado exitosamente.")
@@ -1182,7 +1207,118 @@ def obtener_stock_bajo():
     pausa()
     #---------------------------------------------------------------------------------------
     limpiar()
+############################################################################################
+def crear_procedimiento_obtener_stock_variable():
+    # Conexión a la base de datos MySQL
+    cursor = conectar_base_de_datos()#           sqlite // mysql
 
+
+    # Crear el procedimiento almacenado
+    procedimiento = """
+    CREATE PROCEDURE ObtenerStockBajoCantidad(IN desde_python INT)
+    BEGIN
+        -- Crear una tabla temporal con los productos que cumplen la condición
+        CREATE TEMPORARY TABLE IF NOT EXISTS TempStockBajo AS
+        SELECT codigo_producto, cantidad
+        FROM stock
+        WHERE cantidad <= desde_python;
+
+        -- Seleccionar y devolver la cantidad de registros
+        SELECT COUNT(*) AS cantidad_registros
+        FROM TempStockBajo;
+
+        -- Seleccionar los datos para mostrarlos
+        SELECT codigo_producto, cantidad
+        FROM TempStockBajo;
+    END
+    """
+    try:
+        cursor.execute("DROP PROCEDURE IF EXISTS ObtenerStockBajoCantidad")  # Eliminar el procedimiento si ya existe
+        cursor.execute(procedimiento)
+        print("Procedimiento almacenado 'ObtenerStockBajoCantidad' creado exitosamente.")
+    except mysql.connector.Error as err:
+        print(f"Error creando el procedimiento: {err}")
+
+    cursor.close()
+    connection.close()
+    # Crear el procedimiento almacenado
+    pausa()
+    print("""
+    La diferencia principal entre una tabla temporal y una vista en bases de datos como MySQL radica en su naturaleza, uso y almacenamiento. Aquí te explico las características y diferencias más importantes:
+
+Tabla Temporal
+    Naturaleza:
+
+    Es una tabla real, pero temporal, lo que significa que existe solo durante la sesión del usuario o mientras se ejecuta una transacción.
+    Una vez que la sesión termina o la tabla temporal se elimina explícitamente, los datos también se eliminan.
+    Almacenamiento:
+
+    Se almacena físicamente en el disco o en memoria, dependiendo de la configuración del servidor.
+    Puede tener índices, claves primarias, y otras características similares a una tabla permanente.
+    Contenido:
+
+    Contiene datos específicos que pueden ser manipulados (insertados, actualizados o eliminados) durante su existencia.
+    Los datos son independientes y no se actualizan automáticamente si cambian los datos de las tablas subyacentes.
+    Usos comunes:
+
+    Para almacenar resultados intermedios o datos temporales que se necesiten procesar durante una sesión.
+    Útil para operaciones complejas que requieren cálculos o transformaciones de datos intermedios.
+    Limitaciones:
+
+    Solo es accesible durante la sesión en la que se creó.
+    No está disponible para otros usuarios o sesiones.
+Vista
+    Naturaleza:
+
+    Es una consulta guardada, no almacena datos directamente. Es un objeto que presenta los datos desde una o varias tablas subyacentes según una consulta predefinida.
+    Actúa como una "ventana" hacia los datos subyacentes.
+    Almacenamiento:
+
+    No almacena físicamente los datos; siempre que se consulta, la base de datos ejecuta la consulta subyacente para generar el resultado.
+    No se pueden definir índices directamente en una vista.
+    Contenido:
+
+    Muestra los datos actuales de las tablas subyacentes. Si los datos en las tablas cambian, el contenido de la vista también cambia automáticamente.
+    Es de solo lectura si la consulta incluye combinaciones complejas o funciones agregadas.
+    Usos comunes:
+
+    Simplificar consultas complejas, ya que encapsulan la lógica de la consulta.
+    Restringir el acceso a ciertas columnas o filas para usuarios específicos (control de seguridad).
+    Proporcionar una abstracción lógica de los datos.
+    Limitaciones:
+
+    No es adecuada para operaciones complejas de escritura o para almacenar datos temporales.
+    El rendimiento puede ser más lento si la consulta subyacente es compleja y se ejecuta frecuentemente.
+    """)
+    pausa()
+    #---------------------------------------------------------------------------------------
+    limpiar()
+############################################################################################
+def obtener_stock_bajo_variable():
+    # Conexión a la base de datos MySQL
+    cursor = conectar_base_de_datos()#           sqlite // mysql
+    # Llamar al procedimiento almacenado
+    try:
+        cantidad_parametro = ""
+        while not cantidad_parametro.isdigit():
+            cantidad_parametro = input ("ingrese la cantidad minima de productos:")
+        cantidad_parametro = int(cantidad_parametro )
+        cursor.callproc('ObtenerStockBajoCantidad', [cantidad_parametro])
+
+        # Obtener el resultado
+        for resultado in cursor.stored_results():
+            filas = resultado.fetchall()
+            for fila in filas:
+                print(f"Cantidad de registros con stock <= {cantidad_parametro}: {fila[0]}")
+    except mysql.connector.Error as err:
+        print(f"Error llamando al procedimiento: {err}")
+
+    finally:
+        cursor.close()
+        connection.close()
+    pausa()
+    #---------------------------------------------------------------------------------------
+    limpiar()
 ############################################################################################
 ############################################################################################
 ############################################################################################
@@ -1192,7 +1328,7 @@ def obtener_stock_bajo():
 
 opcion = ""
 dic_datos ={}
-nombre_DDBB      = "it_bbdd_2025_12"
+nombre_DDBB      = "it_bbdd_2025_lunes_y_viernes"
 nombre_tabla_productos     = "productos"
 nombre_columna_1 = "descripcion"
 nombre_columna_2 = "precio"
@@ -1234,6 +1370,8 @@ while opcion !="0":
     11) xlsx (Excel - Calc)
     12) crear_procedimiento_obtener_stock
     13) obtener_stock_bajo
+    14) crear_procedimiento_obtener_stock variable
+    15) obtener_stock_bajo_variable()
     0) Salir del programa""")
     opcion=input("Ingrese la opción seleccionada :").upper()
     match(opcion):
@@ -1263,6 +1401,10 @@ while opcion !="0":
             crear_procedimiento_obtener_stock()
         case "13":
             obtener_stock_bajo()
+        case "14":
+            crear_procedimiento_obtener_stock_variable()
+        case "15":
+            obtener_stock_bajo_variable()
         case "0":
             exit()
         case other: # case _:
